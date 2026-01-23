@@ -41,7 +41,8 @@ JIRA_API_TOKEN=your-api-token-here
 
 # Team Configuration (comma-separated)
 # Format: team_name:board_id:project_key
-TEAMS=ELECOM:58:ELECOM
+# Multiple teams: team1:board1:project1,team2:board2:project2
+TEAMS=ELECOM:58:ELECOM,Search and Nav:56:ELECOM
 
 # AI Adoption Date (YYYY-MM-DD)
 AI_ADOPTION_DATE=2024-01-01
@@ -70,6 +71,19 @@ The board ID is in the URL when you view your Jira board:
 ### Basic Usage
 
 Run the script to generate reports for all configured teams:
+
+**Single Board:**
+```bash
+python3 main.py
+```
+
+**Multiple Boards:**
+The app automatically processes all boards configured in your `.env` file. Just update the `TEAMS` setting:
+```env
+TEAMS=ELECOM:58:ELECOM,Search and Nav:56:ELECOM
+```
+
+See [MULTIPLE_BOARDS_GUIDE.md](MULTIPLE_BOARDS_GUIDE.md) for detailed instructions on configuring multiple boards.
 
 ```bash
 python main.py
@@ -124,6 +138,24 @@ The tool generates PowerPoint presentations (`.pptx` files) with the following s
 5. **Summary**: Key takeaways and highlights
 
 Files are saved as: `reports/{TeamName}_velocity_report_{timestamp}.pptx`
+
+### Uploading to Confluence (Optional)
+
+To automatically upload reports to a Confluence wiki page, add to your `.env`:
+
+```env
+# Confluence Configuration (optional)
+CONFLUENCE_PAGE_ID=279707663
+CONFLUENCE_SPACE_KEY=TR
+```
+
+The app will automatically upload reports after generation. You can also upload manually:
+
+```bash
+python3 confluence_uploader.py
+```
+
+See [CONFLUENCE_UPLOAD_GUIDE.md](CONFLUENCE_UPLOAD_GUIDE.md) for detailed instructions.
 
 ## Tracking AI Impact (Time Saved)
 

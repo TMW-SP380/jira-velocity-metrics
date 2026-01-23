@@ -95,6 +95,31 @@ def generate_report_for_team(team_config: dict):
         ppt_generator.generate_presentation(team_name, comprehensive_metrics, output_file)
         
         print(f"\n✓ Successfully generated report: {output_file}")
+        
+        # Automatic upload to Confluence if configured
+        confluence_page_id = os.getenv('CONFLUENCE_PAGE_ID', '')
+        if confluence_page_id:
+            try:
+                print(f"\nUploading to Confluence...")
+                from confluence_uploader import ConfluenceUploader
+                uploader = ConfluenceUploader()
+                comment = f"Sprint velocity report for {team_name} - {current_sprint.get('name', 'Current Sprint')}"
+                if uploader.upload_attachment(output_file, comment=comment):
+                    print(f"✓ Successfully uploaded to Confluence page {confluence_page_id}")
+                    
+                    # Add attachment links to page content so they're visible
+                    print(f"Adding attachment links to page content...")
+                    uploader.add_attachments_to_page_content()
+                else:
+                    print(f"⚠ Failed to upload to Confluence (check CONFLUENCE_PAGE_ID in .env)")
+            except ValueError as e:
+                print(f"⚠ Confluence upload skipped: {str(e)}")
+                print(f"  (Add CONFLUENCE_PAGE_ID to .env to enable automatic upload)")
+            except Exception as e:
+                print(f"⚠ Confluence upload failed: {str(e)}")
+        else:
+            print(f"\n💡 Tip: Add CONFLUENCE_PAGE_ID to .env to enable automatic upload to Confluence")
+        
         return True
         
     except Exception as e:

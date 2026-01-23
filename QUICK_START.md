@@ -61,8 +61,21 @@ Your PowerPoint report will be saved in the `reports/` folder!
 Edit `.env`:
 
 ```env
-TEAMS=ELECOM:58:ELECOM,Frontend:123:FE,Backend:456:BE
+# Single team
+TEAMS=ELECOM:58:ELECOM
+
+# Multiple teams (comma-separated)
+TEAMS=ELECOM:58:ELECOM,Search and Nav:56:ELECOM
+
+# More teams example
+TEAMS=ELECOM:58:ELECOM,Search and Nav:56:ELECOM,Frontend:123:FE,Backend:456:BE
 ```
+
+**Format:** `team_name:board_id:project_key`
+
+**Finding Board ID:**
+- URL: `https://tailored-prod.atlassian.net/jira/software/c/projects/ELECOM/boards/56`
+- Board ID: `56` (the number after `/boards/`)
 
 ## Troubleshooting
 
