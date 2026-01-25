@@ -1,6 +1,7 @@
 """Main script to generate velocity metrics PPT"""
 import os
 import sys
+import argparse
 from datetime import datetime
 from jira_client import JiraClient
 from metrics_calculator import MetricsCalculator
@@ -8,7 +9,7 @@ from ppt_generator import PPTGenerator
 import config
 
 
-def generate_report_for_team(team_config: dict):
+def generate_report_for_team(team_config: dict, upload_to_confluence: bool = False):
     """Generate report for a specific team"""
     team_name = team_config['name']
     board_id = team_config['board_id']
@@ -96,29 +97,37 @@ def generate_report_for_team(team_config: dict):
         
         print(f"\n✓ Successfully generated report: {output_file}")
         
-        # Automatic upload to Confluence if configured
-        confluence_page_id = os.getenv('CONFLUENCE_PAGE_ID', '')
-        if confluence_page_id:
-            try:
-                print(f"\nUploading to Confluence...")
-                from confluence_uploader import ConfluenceUploader
-                uploader = ConfluenceUploader()
-                comment = f"Sprint velocity report for {team_name} - {current_sprint.get('name', 'Current Sprint')}"
-                if uploader.upload_attachment(output_file, comment=comment):
-                    print(f"✓ Successfully uploaded to Confluence page {confluence_page_id}")
-                    
-                    # Add attachment links to page content so they're visible
-                    print(f"Adding attachment links to page content...")
-                    uploader.add_attachments_to_page_content()
-                else:
-                    print(f"⚠ Failed to upload to Confluence (check CONFLUENCE_PAGE_ID in .env)")
-            except ValueError as e:
-                print(f"⚠ Confluence upload skipped: {str(e)}")
-                print(f"  (Add CONFLUENCE_PAGE_ID to .env to enable automatic upload)")
-            except Exception as e:
-                print(f"⚠ Confluence upload failed: {str(e)}")
+        # Upload to Confluence only if explicitly requested
+        if upload_to_confluence:
+            confluence_page_id = os.getenv('CONFLUENCE_PAGE_ID', '')
+            if confluence_page_id:
+                try:
+                    print(f"\nUploading to Confluence...")
+                    from confluence_uploader import ConfluenceUploader
+                    uploader = ConfluenceUploader()
+                    comment = f"Sprint velocity report for {team_name} - {current_sprint.get('name', 'Current Sprint')}"
+                    if uploader.upload_attachment(output_file, comment=comment):
+                        print(f"✓ Successfully uploaded to Confluence page {confluence_page_id}")
+                        
+                        # Add attachment links to page content so they're visible
+                        print(f"Adding attachment links to page content...")
+                        uploader.add_attachments_to_page_content()
+                    else:
+                        print(f"⚠ Failed to upload to Confluence (check CONFLUENCE_PAGE_ID in .env)")
+                except ValueError as e:
+                    print(f"⚠ Confluence upload skipped: {str(e)}")
+                    print(f"  (Add CONFLUENCE_PAGE_ID to .env to enable upload)")
+                except Exception as e:
+                    print(f"⚠ Confluence upload failed: {str(e)}")
+            else:
+                print(f"\n⚠ Confluence upload requested but CONFLUENCE_PAGE_ID not set in .env")
+                print(f"  Add CONFLUENCE_PAGE_ID to .env to enable upload to Confluence")
         else:
-            print(f"\n💡 Tip: Add CONFLUENCE_PAGE_ID to .env to enable automatic upload to Confluence")
+            confluence_page_id = os.getenv('CONFLUENCE_PAGE_ID', '')
+            if confluence_page_id:
+                print(f"\n💡 Tip: Use --upload flag to upload this report to Confluence")
+            else:
+                print(f"\n💡 Tip: Add CONFLUENCE_PAGE_ID to .env and use --upload flag to upload to Confluence")
         
         return True
         
@@ -131,9 +140,42 @@ def generate_report_for_team(team_config: dict):
 
 def main():
     """Main entry point"""
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='Generate Jira velocity metrics PowerPoint reports',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate reports without uploading
+  python3 main.py
+  
+  # Generate reports and upload to Confluence
+  python3 main.py --upload
+  
+  # Alternative short form
+  python3 main.py -u
+        """
+    )
+    parser.add_argument(
+        '--upload', '-u',
+        action='store_true',
+        help='Upload generated reports to Confluence (requires CONFLUENCE_PAGE_ID in .env)'
+    )
+    
+    args = parser.parse_args()
+    
     print("="*60)
     print("Jira Velocity Metrics Generator")
     print("="*60)
+    
+    if args.upload:
+        print("\n📤 Confluence upload enabled")
+        confluence_page_id = os.getenv('CONFLUENCE_PAGE_ID', '')
+        if not confluence_page_id:
+            print("⚠ Warning: CONFLUENCE_PAGE_ID not set in .env")
+            print("  Upload will be skipped. Add CONFLUENCE_PAGE_ID to enable upload.")
+    else:
+        print("\n📁 Reports will be saved locally (use --upload to upload to Confluence)")
     
     # Validate configuration
     if not config.Config.validate():
@@ -155,11 +197,13 @@ def main():
     # Generate reports for each team
     success_count = 0
     for team in teams:
-        if generate_report_for_team(team):
+        if generate_report_for_team(team, upload_to_confluence=args.upload):
             success_count += 1
     
     print("\n" + "="*60)
     print(f"Completed: {success_count}/{len(teams)} reports generated successfully")
+    if args.upload:
+        print(f"Reports uploaded to Confluence: {success_count}/{len(teams)}")
     print("="*60)
 
 
